@@ -41,24 +41,34 @@ class GraphWidget(QWidget):
         graph_width = width - 2 * margin
         graph_height = height - 2 * margin
 
-        painter.setPen(QPen(Qt.lightGray, 1, Qt.DashLine))
-        step_x = graph_width / 10
-        step_y = graph_height / 10
-        for i in range(11):
-            x = margin + i * step_x
-            painter.drawLine(x, margin, x, height - margin)
-            y = margin + i * step_y
-            painter.drawLine(margin, y, width - margin, y)
+        center_x = width // 2
+        center_y = height // 2
+        grid_step = 40
 
+        # Определение глобальных границ для всех графиков
+        all_x = [x for func_data in self.data.values() for x in func_data[0]]
+        all_y = [y for func_data in self.data.values() for y in func_data[1]]
+        min_x, max_x = min(all_x), max(all_x)
+        min_y, max_y = min(all_y), max(all_y)
+
+        # Рисуем сетку и подписи осей
+        pen = QPen(Qt.lightGray, 1, Qt.DashLine)
+        painter.setPen(pen)
+        for i in range(-10, 11):
+            x = center_x + i * grid_step
+            y = center_y - i * grid_step
+
+            painter.drawLine(x, 0, x, height)  # Вертикальные линии
+            painter.drawLine(0, y, width, y)  # Горизонтальные линии
+
+            if i != 0:
+                painter.drawText(x - 10, center_y + 20, str(i))  # Подписи по оси X
+                painter.drawText(center_x + 10, y + 5, str(-i))  # Подписи по оси Y
+
+        # Оси координат
         painter.setPen(QPen(Qt.black, 2))
-        x_axis_y = margin + graph_height / 2
-        y_axis_x = margin + graph_width / 2
-        painter.drawLine(margin, x_axis_y, width - margin, x_axis_y)
-        painter.drawLine(y_axis_x, margin, y_axis_x, height - margin)
-
-        font = painter.font()
-        font.setPointSize(10)
-        painter.setFont(font)
+        painter.drawLine(0, center_y, width, center_y)  # Ось X
+        painter.drawLine(center_x, 0, center_x, height)  # Ось Y
 
         colors = [Qt.red, Qt.green, Qt.blue]
         for idx, (func_id, (x_vals, y_vals, label)) in enumerate(self.data.items()):
@@ -66,14 +76,12 @@ class GraphWidget(QWidget):
             pen.setWidth(2)
             painter.setPen(pen)
 
-            min_x, max_x = min(x_vals), max(x_vals)
-            min_y, max_y = min(y_vals), max(y_vals)
-
             prev_point = None
             for x, y in zip(x_vals, y_vals):
-                px = margin + ((x - min_x) / (max_x - min_x)) * graph_width if max_x != min_x else margin
-                py = margin + graph_height - ((y - min_y) / (max_y - min_y)) * graph_height if max_y != min_y else margin
-                if prev_point:
+                px = center_x + x * grid_step
+                py = center_y - y * grid_step
+
+                if prev_point and abs(prev_point.y() - py) < height:  # Проверка разрыва
                     painter.drawLine(prev_point, QPointF(px, py))
                 prev_point = QPointF(px, py)
 
