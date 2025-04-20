@@ -8,17 +8,58 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QPainter, QPen, QBrush, QFont, QColor, QFontMetrics
 from PySide6.QtCore import Qt, QPointF
 
-# Категории данных для гистограммы (аналоги функций из исходного кода)
-categories_data = {
-    "1": {"name": "Категория A", "values": [5, 7, 3, 8, 2]},
-    "2": {"name": "Категория B", "values": [3, 4, 6, 2, 5]},
-    "3": {"name": "Категория C", "values": [2, 5, 4, 3, 6]},
-    "4": {"name": "Категория D", "values": [4, 3, 5, 6, 3]},
-    "5": {"name": "Категория E", "values": [6, 2, 7, 4, 5]},
-    "6": {"name": "Категория F", "values": [3, 6, 2, 5, 4]},
-    "7": {"name": "Категория G", "values": [7, 3, 5, 2, 6]},
-    "8": {"name": "Категория H", "values": [2, 5, 3, 6, 4]},
-    "9": {"name": "Категория I", "values": [4, 6, 3, 5, 2]}
+# Функции для гистограммы
+def func1(x):
+    """f1(x) = x"""
+    return x
+
+def func2(x):
+    """f2(x) = x^2"""
+    return x**2
+
+def func3(x):
+    """f3(x) = 1/x (с разрывом в 0)"""
+    if x == 0 or abs(x) < 1e-10:
+        return None
+    return 1/x
+
+def func4(x):
+    """f4(x) = sin(x)"""
+    return math.sin(x)
+
+def func5(x):
+    """f5(x) = cos(x)"""
+    return math.cos(x)
+
+def func6(x):
+    """f6(x) = 2*sin(x)"""
+    return 2*math.sin(x)
+
+def func7(x):
+    """f7(x) = e^(-x^2)"""
+    return math.exp(-x*x)
+
+def func8(x):
+    """f8(x) = ln(x), только для x>0"""
+    if x <= 0:
+        return None
+    return math.log(x)
+
+def func9(x):
+    """f9(x) = x^3"""
+    return x**3
+
+# Словарь функций
+functions_map = {
+    "1": (func1, "f(x) = x"),
+    "2": (func2, "f(x) = x²"),
+    "3": (func3, "f(x) = 1/x"),
+    "4": (func4, "f(x) = sin(x)"),
+    "5": (func5, "f(x) = cos(x)"),
+    "6": (func6, "f(x) = 2*sin(x)"),
+    "7": (func7, "f(x) = e^(-x²)"),
+    "8": (func8, "f(x) = ln(x)"),
+    "9": (func9, "f(x) = x³")
 }
 
 
@@ -27,13 +68,13 @@ class StackedHistogramWidget(QWidget):
         super().__init__()
         self.setMinimumSize(600, 600)
 
-        # Настройки аналогичны исходному коду
+        # Настройки по умолчанию
         self.x_min = 0
         self.x_max = 10
         self.num_bins = 5
-        self.selected_categories = []
+        self.selected_functions = []
 
-        # Цвета для категорий
+        # Цвета для функций
         self.color_map = {
             "1": QColor(Qt.blue),
             "2": QColor(Qt.green),
@@ -46,11 +87,11 @@ class StackedHistogramWidget(QWidget):
             "9": QColor(Qt.darkRed)
         }
 
-    def update_settings(self, x_min, x_max, num_bins, selected_categories):
+    def update_settings(self, x_min, x_max, num_bins, selected_functions):
         self.x_min = x_min
         self.x_max = x_max
         self.num_bins = num_bins
-        self.selected_categories = selected_categories[:9]  # Максимум 9 категорий
+        self.selected_functions = selected_functions[:9]  # Максимум 9 функций
         self.update()
 
     def paintEvent(self, event):
@@ -75,13 +116,20 @@ class StackedHistogramWidget(QWidget):
             bin_data = {}
             total = 0
 
-            for cat in self.selected_categories:
-                if cat in categories_data:
-                    # Используем циклическое повторение значений, если их не хватает
-                    values = categories_data[cat]["values"]
-                    value = values[bin_idx % len(values)]
-                    total += value
-                    bin_data[cat] = total
+            # Вычисляем середину интервала для текущего столбца
+            x = self.x_min + (bin_idx + 0.5) * (self.x_max - self.x_min) / self.num_bins
+
+            for func_id in self.selected_functions:
+                if func_id in functions_map:
+                    func = functions_map[func_id][0]
+                    try:
+                        value = func(x)
+                        if value is not None:
+                            # margin_top = 70  # Увеличиваем верхний отступvalue = abs(value)  # Берем модуль значения
+                            total += value
+                            bin_data[func_id] = total
+                    except:
+                        pass  # Игнорируем ошибки вычислений
 
             if total > max_value:
                 max_value = total
@@ -109,10 +157,10 @@ class StackedHistogramWidget(QWidget):
         painter.setFont(font)
 
         # Подпись оси X
-        painter.drawText(W - margin - 30, H - margin + 30, "Категории")
+        painter.drawText(W - margin - 30, H - margin + 30, "X")
 
         # Подпись оси Y
-        painter.drawText(margin - 30, margin + 10, "Значения")
+        painter.drawText(margin - 30, margin + 10, "Y")
 
         # Деления и подписи на оси X
         for i in range(self.num_bins + 1):
@@ -129,6 +177,22 @@ class StackedHistogramWidget(QWidget):
             painter.drawLine(margin, y, margin - 5, y)
             painter.drawText(margin - 45, y + 5, f"{value:.1f}")
 
+        for i in range(y_ticks + 1):
+            value = i * max_value / y_ticks
+            y = H - margin - i * plot_height / y_ticks
+            painter.setPen(QPen(Qt.lightGray, 1, Qt.DashLine))  # Линии сетки
+            painter.drawLine(margin, y, W - margin, y)  # Горизонтальная линия
+            painter.setPen(QPen(Qt.black, 1))  # Возвращаем черный цвет для текста
+            painter.drawLine(margin, y, margin - 5, y)  # Маленькая черта на оси Y
+            painter.drawText(margin - 45, y + 5, f"{value:.1f}")
+
+        # Добавляем вертикальные линии сетки
+        for i in range(self.num_bins + 1):
+            x = margin + i * bin_width
+            painter.setPen(QPen(Qt.lightGray, 1, Qt.DashLine))  # Линии сетки
+            painter.drawLine(x, H - margin, x, margin)  # Вертикальная линия
+            painter.setPen(QPen(Qt.black, 1))  # Возвращаем черный цвет для текста
+
         # 3) Рисуем stacked гистограмму с 3D-эффектом
         bar_width = bin_width * 0.8
         bar_spacing = bin_width * 0.1
@@ -138,16 +202,16 @@ class StackedHistogramWidget(QWidget):
             x = margin + bin_idx * bin_width + bar_spacing
             prev_height = 0
 
-            for cat in self.selected_categories:
-                if cat in data[bin_idx]:
-                    value = data[bin_idx][cat]
+            for func_id in self.selected_functions:
+                if func_id in data[bin_idx]:
+                    value = data[bin_idx][func_id]
                     height = value * plot_height / max_value
 
                     # Высота текущего сегмента
                     segment_height = height - prev_height
 
                     # Рисуем переднюю часть сегмента
-                    color = self.color_map.get(cat, QColor(Qt.gray))
+                    color = self.color_map.get(func_id, QColor(Qt.gray))
                     painter.setBrush(QBrush(color, Qt.SolidPattern))
                     painter.setPen(QPen(color.darker(), 1))
                     painter.drawRect(x, H - margin - height, bar_width, segment_height)
@@ -195,21 +259,21 @@ class LegendWidget(QWidget):
         painter.setFont(font)
         fm = QFontMetrics(font)
 
-        for cat in self.plot_widget.selected_categories:
-            if cat in categories_data:
-                color = self.plot_widget.color_map.get(cat, QColor(Qt.gray))
-                name = categories_data[cat]["name"]
+        for func_id in self.plot_widget.selected_functions:
+            if func_id in functions_map:
+                color = self.plot_widget.color_map.get(func_id, QColor(Qt.gray))
+                formula = functions_map[func_id][1]
 
-                # Квадратик с цветом категории
+                # Квадратик с цветом функции
                 marker_size = 15
                 painter.setBrush(color)
                 painter.setPen(color)
                 painter.drawRect(x_pos, y_pos - marker_size, marker_size, marker_size)
 
-                # Название категории
+                # Формула функции
                 painter.setPen(Qt.black)
-                text_width = fm.horizontalAdvance(name)
-                painter.drawText(x_pos + marker_size + 5, y_pos - marker_size // 2 + fm.ascent() // 2, name)
+                text_width = fm.horizontalAdvance(formula)
+                painter.drawText(x_pos + marker_size + 5, y_pos - marker_size // 2 + fm.ascent() // 2, formula)
 
                 x_pos += marker_size + text_width + gap
 
@@ -237,18 +301,18 @@ class SettingsWindow(QWidget):
         layout.addWidget(QLabel("X max:"))
         layout.addWidget(self.x_max_spin)
 
-        # Количество столбцов (аналог количества точек)
+        # Количество столбцов
         self.num_bins_spin = QDoubleSpinBox()
         self.num_bins_spin.setRange(2, 100)
         self.num_bins_spin.setValue(5)
         layout.addWidget(QLabel("Количество столбцов (N):"))
         layout.addWidget(self.num_bins_spin)
 
-        # Выбор категорий (аналог выбора функций)
-        self.categories_input = QLineEdit()
-        self.categories_input.setPlaceholderText("Введите номера категорий (1-9), например: 1 3 5")
-        layout.addWidget(QLabel("Категории:"))
-        layout.addWidget(self.categories_input)
+        # Выбор функций
+        self.functions_input = QLineEdit()
+        self.functions_input.setPlaceholderText("Введите номера функций (1-9), например: 1 3 5")
+        layout.addWidget(QLabel("Функции:"))
+        layout.addWidget(self.functions_input)
 
         # Кнопка применения
         apply_button = QPushButton("Применить")
@@ -258,15 +322,15 @@ class SettingsWindow(QWidget):
         self.setLayout(layout)
 
     def apply_settings(self):
-        selected_categories = [
-            cat.strip() for cat in self.categories_input.text().split()
-            if cat.strip() in categories_data
+        selected_functions = [
+            func_id.strip() for func_id in self.functions_input.text().split()
+            if func_id.strip() in functions_map
         ]
         x_min = self.x_min_spin.value()
         x_max = self.x_max_spin.value()
         num_bins = int(self.num_bins_spin.value())
 
-        self.plot_widget.update_settings(x_min, x_max, num_bins, selected_categories)
+        self.plot_widget.update_settings(x_min, x_max, num_bins, selected_functions)
         self.legend_widget.update()
 
 
