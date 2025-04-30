@@ -40,7 +40,6 @@ class PlotTriangle:
         self.max_y = np.max(sum_positives)
         self.min_y = np.min(sum_negatives)
 
-
         self.max_y_without_padd = self.max_y
         self.min_y_without_padd = self.min_y
         # Добавляем отступ для визуального комфорта
@@ -49,28 +48,18 @@ class PlotTriangle:
         self.min_y -= padding
         self.max_y += padding
 
-
         if self.min_y > 0:
             self.min_y = 0 - padding
         if self.max_y < 0:
             self.max_y = 0 + padding
 
-        self.gap_ratio = 0.23
+        self.gap_ratio = 0.8
 
         num_bars = len(self.x_values)
 
-        # Количество зазоров между столбцами — на 1 меньше, чем количество столбцов
-        total_gap_count = num_bars - 1
-
-        # Найдём общую ширину одного бара и одного зазора, так чтобы всё влезло
-        # TODO: Need to fix
-        group_width = (self.widget_width / (num_bars + total_gap_count * self.gap_ratio)) * (1 - self.gap_ratio)
-
-        self.parallelepiped_bar = group_width # Ширина параллелепипеда
-        self.gap_size = group_width * self.gap_ratio
-
-
-
+        # Вычисляем ширину одного столбца так, чтобы всё поместилось в self.widget_width
+        self.parallelepiped_bar = self.widget_width / (num_bars + (num_bars - 1) * self.gap_ratio)
+        self.gap_size = self.parallelepiped_bar * self.gap_ratio
 
     def calculate_x_mapped(self):
         for j in range(len(self.x_values)):
@@ -78,7 +67,6 @@ class PlotTriangle:
             for i, y_data in enumerate(self.y_values):
                 adjusted_x = self.calculate_parallelipiped_x(x_start)
                 self.x_grid[i][j] = adjusted_x
-
 
     def x_widget(self, x, widget_width):
         return int((x - self.min_x) / (self.max_x - self.min_x) * widget_width)
@@ -91,12 +79,7 @@ class PlotTriangle:
             QColor(210, 0, 107),
             QColor(255, 108, 0),
             QColor(0, 158, 142),
-            QColor(149, 236, 0),
-            QColor(100, 149, 237),
-            QColor(220, 20, 60),
-            QColor(123, 104, 238),
-            QColor(255, 215, 0),
-            QColor(70, 130, 180)
+            QColor(149, 236, 0)
         ]
         text_offset = 20
         legend_start_x = 20
@@ -114,7 +97,7 @@ class PlotTriangle:
 
         # Рисуем белый фон под легенду
         painter.setBrush(QBrush(QColor(255, 255, 255)))
-        painter.drawRect(legend_start_x - 5, self.widget_height , total_width + 10, self.window_start)
+        painter.drawRect(legend_start_x - 5, self.widget_height, total_width + 10, self.window_start)
 
         # Рисуем элементы легенды в ряд
         current_x = legend_start_x
@@ -124,8 +107,6 @@ class PlotTriangle:
             painter.drawRect(current_x, legend_start_y, box_size, box_size)
             painter.drawText(current_x + text_offset, legend_start_y + box_size // 2 + 5, item.text())
             current_x += item_widths[i]
-
-
 
     def draw_grid(self, painter, style):
         pen = QPen(style.grid_color)
@@ -139,19 +120,20 @@ class PlotTriangle:
 
         for j in range(len(self.x_values)):
             x_mapped = np.mean(transorm_grid[j][:])
-            painter.drawLine(x_mapped, 0, x_mapped, self.widget_height)
+            painter.drawLine(x_mapped + self.parallelepiped_bar // 3, 0, x_mapped + self.parallelepiped_bar // 3,
+                             self.widget_height)
 
             label = f"{self.x_values[j]:.2f}"  # Format the label as needed
-            painter.drawText(x_mapped + 5, self.widget_height - 5, label)
+            painter.drawText(x_mapped + 5 + self.parallelepiped_bar // 3, self.widget_height - 5, label)
 
         # Рисуем горизонтальные линии сетки
         y_zero_mapped = self.y_widget(0, self.widget_height)
         max_value = float(np.max([abs(self.min_y_without_padd), self.max_y_without_padd]))
 
-
         # Горизонтальные линии
         step = max_value / 4
         y = 0
+        x_start_line = self.window_start + self.widget_width + self.window_end
         while y < float(np.max([abs(self.min_y), self.max_y])):
 
             y += step
@@ -159,32 +141,31 @@ class PlotTriangle:
             # y_mapped = int(y_zero_mapped - y / self.max_y * y_zero_mapped)
             y_mapped = self.y_widget(y, self.widget_height)
             if y == 0:
-                painter.drawLine(0, y_mapped, self.window_start + self.widget_width + self.window_end, y_mapped)
+                painter.drawLine(0, y_mapped, x_start_line, y_mapped)
 
                 label = f" {y:.2f}"  # Format the label as needed
                 painter.drawText(5, y_mapped, label)
                 continue
-            if y_mapped > 0 :
-                painter.drawLine(0, y_mapped, self.window_start + self.widget_width + self.window_end, y_mapped)
+            if y_mapped > 0:
+                painter.drawLine(0, y_mapped, x_start_line, y_mapped)
 
                 label = f" {y:.2f}"  # Format the label as needed
                 painter.drawText(5, y_mapped, label)
 
             horizont_mapped = y_zero_mapped + (y_zero_mapped - y_mapped)
             if horizont_mapped < self.widget_height:
-
-                painter.drawLine(0, horizont_mapped, self.window_start + self.widget_width + self.window_end, horizont_mapped)
+                painter.drawLine(0, horizont_mapped, x_start_line, horizont_mapped)
 
                 label = f"-{y:.2f}"  # Format the label as needed
                 painter.drawText(5, horizont_mapped, label)
-
 
         # Рисуем ось X
         pen.setStyle(Qt.SolidLine)
         pen.setColor(style.grid_black)
         painter.setPen(pen)
-        painter.drawLine(0, y_zero_mapped, (self.window_end + self.window_start + self.widget_width), y_zero_mapped)
-
+        painter.drawLine(0, y_zero_mapped,
+                         self.window_end + self.window_start + self.widget_width + self.parallelepiped_bar // 3,
+                         y_zero_mapped)
 
     def calculate_parallelipiped_x(self, x_start):
         x_parallelipiped = self.window_start + x_start
@@ -193,11 +174,9 @@ class PlotTriangle:
     def draw_parallelepiped(self, painter, adjusted_x, y_zero_mapped, y_data_value, piramide_bar):
         y = self.y_widget(y_data_value, self.widget_height)
 
-
         width = piramide_bar
         depth = piramide_bar // 8  # Глубина для создания 3D эффекта
         height = abs(self.y_zero_mapped - y)
-
 
         # Определяем координаты для передней грани
         if y_data_value >= 0:
@@ -254,19 +233,13 @@ class PlotTriangle:
             QColor(210, 0, 107),
             QColor(255, 108, 0),
             QColor(0, 158, 142),
-            QColor(149, 236, 0),
-            QColor(100, 149, 237),
-            QColor(220, 20, 60),
-            QColor(123, 104, 238),
-            QColor(255, 215, 0),
-            QColor(70, 130, 180)
+            QColor(149, 236, 0)
         ]
 
-        
         self.y_zero_mapped = self.y_widget(0, self.widget_height)
 
         for j in range(len(self.x_values)):
-            x_start = j * (self.parallelepiped_bar + self.gap_size)
+            x_start = j * (self.parallelepiped_bar + self.gap_size) + self.parallelepiped_bar // 3
             column = self.y_values[:, j]
 
             # Разделяем индексы на отрицательные и положительные
@@ -278,7 +251,7 @@ class PlotTriangle:
 
             # Положительные значения: от самых маленьких к самым большим
             pos_sorted_indices = np.sort(pos_indices)
-            
+
             print(neg_sorted_indices, pos_sorted_indices)
             # Сначала рисуем отрицательные, потом положительные
             for i in np.concatenate((neg_sorted_indices, pos_sorted_indices)):
@@ -291,7 +264,8 @@ class PlotTriangle:
                 if y_data < 0:
                     # Берём накопление до текущего индекса среди отрицательных
                     arr = self.arr_negatives.T[j]
-                    neg_stack = np.sum(arr[neg_sorted_indices[neg_sorted_indices < i]])  # Накопление среди отрицательных
+                    neg_stack = np.sum(
+                        arr[neg_sorted_indices[neg_sorted_indices < i]])  # Накопление среди отрицательных
                     y_zero_mapped = self.y_widget(neg_stack, self.widget_height)
                 else:
                     arr = self.arr_positives.T[j]
