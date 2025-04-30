@@ -38,6 +38,7 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.plot_button)
         main_layout.addWidget(self.plot_widget)
 
+
         # Добавление первого ввода функции
         self.add_function_input()
 

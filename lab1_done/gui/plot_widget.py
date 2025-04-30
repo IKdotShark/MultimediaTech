@@ -12,6 +12,7 @@ class PlotWidget(QWidget):
         self.function_input = None
 
         self.setMinimumSize(600, 600)
+        # self.setMaximumSize(800, 800)
         self.style = PlotStyle()
 
     def set_data(self, x_values, y_values, function_input):

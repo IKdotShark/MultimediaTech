@@ -55,7 +55,7 @@ class PlotTriangle:
         if self.max_y < 0:
             self.max_y = 0 + padding
 
-        self.gap_ratio = 0.15
+        self.gap_ratio = 0.23
 
         num_bars = len(self.x_values)
 
@@ -63,9 +63,10 @@ class PlotTriangle:
         total_gap_count = num_bars - 1
 
         # Найдём общую ширину одного бара и одного зазора, так чтобы всё влезло
-        group_width = self.widget_width / (num_bars + total_gap_count * self.gap_ratio)
+        # TODO: Need to fix
+        group_width = (self.widget_width / (num_bars + total_gap_count * self.gap_ratio)) * (1 - self.gap_ratio)
 
-        self.parallelepiped_bar = group_width
+        self.parallelepiped_bar = group_width # Ширина параллелепипеда
         self.gap_size = group_width * self.gap_ratio
 
 
@@ -98,7 +99,7 @@ class PlotTriangle:
             QColor(70, 130, 180)
         ]
         text_offset = 20
-        legend_start_x = 0
+        legend_start_x = 20
         legend_start_y = self.widget_height + self.window_start / 2 - text_offset / 2
         box_size = 15
 
@@ -182,7 +183,7 @@ class PlotTriangle:
         pen.setStyle(Qt.SolidLine)
         pen.setColor(style.grid_black)
         painter.setPen(pen)
-        painter.drawLine(0, y_zero_mapped, self.window_end + self.window_start + self.widget_width, y_zero_mapped)
+        painter.drawLine(0, y_zero_mapped, (self.window_end + self.window_start + self.widget_width), y_zero_mapped)
 
 
     def calculate_parallelipiped_x(self, x_start):
